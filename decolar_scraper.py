@@ -189,10 +189,8 @@ class Decolar(Scraper):
             child_add_button.click()
             time.sleep(0.2)
 
-        '''
-            Caso a quantidade de menores selecionada for maior que zero,
-            é necessário informar a idade de cada menor.
-        '''
+        # Caso a quantidade de menores selecionada for maior que zero,
+        # é necessário informar a idade de cada menor.
         options_lines = self.driver.find_elements(By.CLASS_NAME, 'select__row__options__container')
         for option in options_lines:
             option.click()
