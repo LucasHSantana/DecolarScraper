@@ -52,6 +52,9 @@ class Scraper():
             'document.title = "Automação Busca Pacote Decolar"'
         )
 
+    def close_browser(self):
+        self.driver.quit()
+
     def __del__(self):
         self.driver.quit()
 
