@@ -6,12 +6,13 @@
 
 from datetime import datetime
 import time
-from selenium_scraper import Scraper
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 from bs4 import BeautifulSoup
+from selenium_scraper import Scraper
 
 # Mapeamento dos elementos do site que serão utilizados
 SITE_MAP = {
@@ -24,6 +25,10 @@ SITE_MAP = {
         },
         'aplicar_calendar': {  # Aplica a selecão de datas de partida e retorno
             'xpath': '//*[@id="component-modals"]/div[1]/div[2]/div[1]/button'
+        },
+        'aplicar_bedroom':
+        {
+            'xpath': '//*[@id="component-modals"]/div[2]/div/div/div[2]/a[1]'
         }
     },
     'inputs': {
@@ -34,10 +39,10 @@ SITE_MAP = {
         'destino': {  # Campo de digitação da cidade de destino
             'xpath': '//*[@id="searchbox-sbox-box-packages"]/div/div/div/div/div[3]/div[1]/div/div[2]/div/div/input'
         },
-        'dtini':{  # Campo da data de partida (não são digitáveis)
+        'dtini': {  # Campo da data de partida (não são digitáveis)
             'xpath_click': '//*[@id="searchbox-sbox-box-packages"]/div/div/div/div/div[3]/div[2]/div[1]/div[1]/div/div/div/div/input'
         },
-        'dtfin':{  # Campo da data de retorno (não são digitáveis)
+        'dtfin': {  # Campo da data de retorno (não são digitáveis)
             'xpath_click': '//*[@id="searchbox-sbox-box-packages"]/div/div/div/div/div[3]/div[2]/div[1]/div[2]/div/div/div/div/input'
         },
         'calendar_container': {  # Calendário para escolha das datas de partida e retorno
@@ -46,12 +51,21 @@ SITE_MAP = {
             'xpath_button_left': '//*[@id="component-modals"]/div[1]/div[1]/div[2]/a[1]',
             'xpath_button_right': '//*[@id="component-modals"]/div[1]/div[1]/div[2]/a[2]',
         },
-        'filtro_preco': { # filtro de ordenação de preço
+        'filtro_preco': {  # filtro de ordenação de preço
             # Combo de seleção do filtro
             'xpath_filtro': '/html/body/aloha-app-root/aloha-results/div/div/div[2]/div[2]/div[2]/aloha-list-view-container/aloha-toolbar/div/aloha-order-inline/div/aloha-select/div/div/select',
             # Opção de preço do menor para o maior
             'xpath_option': '''/html/body/aloha-app-root/aloha-results/div/div/div[2]/div[2]/div[2]/
                 aloha-list-view-container/aloha-toolbar/div/aloha-order-inline/div/aloha-select/div/div/select/option[1]'''
+        },
+        'bedroom': {
+            'xpath': '//*[@id="searchbox-sbox-box-packages"]/div/div/div/div/div[3]/div[3]/div/div/div'
+        },
+        'bedroom_container': {
+            'adults_minus': '//*[@id="component-modals"]/div[2]/div/div/div[1]/div[2]/div[1]/div[2]/div/button[1]',
+            'adults_add': '//*[@id="component-modals"]/div[2]/div/div/div[1]/div[2]/div[1]/div[2]/div/button[2]',
+            'child_minus': '//*[@id="component-modals"]/div[2]/div/div/div[1]/div[2]/div[2]/div[2]/div/button[1]',
+            'child_add': '//*[@id="component-modals"]/div[2]/div/div/div[1]/div[2]/div[2]/div[2]/div/button[2]',
         }
     }
 }
@@ -68,8 +82,11 @@ class Decolar(Scraper):
         # ActionChains usado para mover a página até o elemento para poder ser clicado
         self.actions = ActionChains(self.driver)
 
-    # Verifica se o xpath já existe na página
     def _check_if_exists_xpath(self, xpath):
+        '''
+        Verifica se o xpath já existe na página
+        '''
+
         try:
             self.driver.find_element(By.XPATH, xpath)
         except NoSuchElementException:
@@ -77,17 +94,23 @@ class Decolar(Scraper):
 
         return True
 
-    # Recupera o ano e o mês das colunas do calendário
     def _get_year_month(self):
+        '''
+        Recupera o ano e o mês das colunas do calendário
+        '''
+
         year1, month1 = [int(n) for n in self.driver.find_element(By.XPATH, SITE_MAP['inputs']['calendar_container']['xpath_month_year1']).get_attribute('data-month').split('-')]
         year2, month2 = [int(n) for n in self.driver.find_element(By.XPATH, SITE_MAP['inputs']['calendar_container']['xpath_month_year2']).get_attribute('data-month').split('-')]
 
         return year1, month1, year2, month2
 
-    # Realiza a navegação pelo calendário para selecionar as datas corretas
     def _click_day_calendar(self, date):
+        '''
+        Realiza a navegação pelo calendário para selecionar as datas corretas
+        '''
+
         time.sleep(1)
-        year1, month1, year2, month2 = self._get_year_month() # Recupera oo ano e o mês mostrados no calendário
+        year1, month1, year2, month2 = self._get_year_month()  # Recupera oo ano e o mês mostrados no calendário
 
         # Realiza a formatação das datas para processamento
         year_date = int(date.strftime('%Y'))
@@ -132,11 +155,52 @@ class Decolar(Scraper):
                 time.sleep(1)
                 break
 
+    def _select_bedroom_person_qty(self, adults, menor, menor_ages):
+        '''
+        Função para selecionar a quantidade de quartos
+        e pessoas (adultos e crianças)
+        '''
 
-    def pesquisar_voo(self, origem, destino, dtini='', dtfin=''):
+        time.sleep(1)
+
+        adults_minus_button = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['bedroom_container']['adults_minus'])
+        child_minus_button = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['bedroom_container']['child_minus'])
+        adults_add_button = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['bedroom_container']['adults_add'])
+        child_add_button = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['bedroom_container']['child_add'])
+        apply_button = self.driver.find_element(By.XPATH, SITE_MAP['buttons']['aplicar_bedroom']['xpath'])
+
+        while not adults_minus_button.get_property('disabled'):
+            adults_minus_button.click()
+            time.sleep(0.2)
+
+        while not child_minus_button.get_property('disabled'):
+            child_minus_button.click()
+            time.sleep(0.2)
+
+        for _ in range(1, adults):
+            adults_add_button.click()
+            time.sleep(0.2)
+
+        for _ in range(menor):
+            child_add_button.click()
+            time.sleep(0.2)
+
+        options_lines = self.driver.find_elements(By.CLASS_NAME, 'select__row__options__container')
+        for option in options_lines:
+            option.click()
+            option_ages = Select(option.find_element(By.CLASS_NAME, 'select'))
+            option_ages.select_by_value(str(menor_ages.pop()))
+
+        self.actions.move_to_element(apply_button).perform()
+        apply_button.click()
+
+    def pesquisar_voo(self, origem, destino, dtini='', dtfin='', adults=2, menor=0, menor_ages=[]):
         '''
         Função para pesquisar os voos
         '''
+
+        if (adults + menor) > 8:
+            raise Exception('Quantidade de pessoas maior que o permitido! (Quantidade máxima = 8)')
 
         # Formata as datas para o tipo correto
         dtini = datetime.strptime(dtini, '%d/%m/%Y').date()
@@ -147,16 +211,17 @@ class Decolar(Scraper):
         if cookie_button:
             cookie_button.click()
 
-        origem_element = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['origem']['xpath']) # Localiza o elemento para digitação da cidade de origem
-        self.actions.move_to_element(origem_element).perform() # Move a página até ele
-        origem_element.click() # Clica no elemento (se não clicar, não aparece a lista de cidades ao digitar, e causa problemas ao consultar)
+        # Preenche o campo de origem
+        origem_element = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['origem']['xpath'])  # Localiza o elemento para digitação da cidade de origem
+        self.actions.move_to_element(origem_element).perform()  # Move a página até ele
+        origem_element.click()  # Clica no elemento (se não clicar, não aparece a lista de cidades ao digitar, e causa problemas ao consultar)
         origem_element.clear()
         time.sleep(1)
-        origem_element.send_keys(origem) # Envia a cidade para o campo
+        origem_element.send_keys(origem)  # Envia a cidade para o campo
         time.sleep(2)
-        origem_element.send_keys(Keys.ENTER) # Envia um ENTER para selecionar a primeira cidade na lista
+        origem_element.send_keys(Keys.ENTER)  # Envia um ENTER para selecionar a primeira cidade na lista
 
-        # Realiza o mesmo processo do elemento acima
+        # Realiza o mesmo processo do elemento acima para o destino
         destino_element = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['destino']['xpath'])
         self.actions.move_to_element(destino_element).perform()
         destino_element.click()
@@ -172,18 +237,23 @@ class Decolar(Scraper):
         self.actions.move_to_element(dtini_element).perform()
         dtini_element.click()
 
-        self._click_day_calendar(dtini) # Seleciona no calendário a data de partida
-        self._click_day_calendar(dtfin) # Seleciona no calendário a data de retorno
+        self._click_day_calendar(dtini)  # Seleciona no calendário a data de partida
+        self._click_day_calendar(dtfin)  # Seleciona no calendário a data de retorno
 
         calendar_aplicar_element = self.driver.find_element(By.XPATH, SITE_MAP['buttons']['aplicar_calendar']['xpath'])
         self.actions.move_to_element(calendar_aplicar_element).perform()
-        calendar_aplicar_element.click() # Clica no botão aplicar no calendário
+        calendar_aplicar_element.click()  # Clica no botão aplicar no calendário
+
+        bedroom = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['bedroom']['xpath'])
+        self.actions.move_to_element(bedroom).perform()
+        bedroom.click()
+
+        self._select_bedroom_person_qty(adults, menor, menor_ages)
 
         buscar_element = self.driver.find_element(By.XPATH, SITE_MAP['buttons']['buscar']['xpath'])
         self.actions.move_to_element(buscar_element).perform()
         time.sleep(1)
-        buscar_element.click() # Clica no botão buscar para realizar a consulta
-
+        buscar_element.click()  # Clica no botão buscar para realizar a consulta
 
     def get_menores_precos(self):
         '''
@@ -224,13 +294,27 @@ class Decolar(Scraper):
             print(anuncio.find('aloha-location-name').find('span').get_text().replace('\n', '').strip())
             print(anuncio.find('span', {'class': 'main-value'}).get_text())
 
+
 if __name__ == '__main__':
     try:
         decolar = Decolar('edge')
 
+        '''
+            Quantidade de adultos + menores não pode passar de 8
+            Para menores de 1 ano de idade, informar idade como 0
+        '''
+        args = {
+            'origem': 'São Paulo',
+            'destino': 'Tóquio',
+            'dtini': '06/11/2023',
+            'dtfin': '22/11/2023',
+            'adults': 2,
+            'menor': 5,
+            'menor_ages': [0, 2, 5, 3, 14]  # Idade de todos os menores de 18 anos
+        }
+
         decolar.abrir_site('https://www.decolar.com/pacotes/')
-        decolar.pesquisar_voo('São Paulo', 'Tóquio', '06/11/2023', '22/11/2023')
+        decolar.pesquisar_voo(**args)
         decolar.get_menores_precos()
     except Exception as err:
-        print(f'Erro: {err}' )
-        
+        print(f'Erro: {err}')
