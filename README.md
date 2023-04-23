@@ -15,7 +15,8 @@ Este projeto tem a finalidade de realizar consultas no site da decolar para recu
 Rodar o comando `pip install -r requirements.txt`
 
 ## Utilização
-No arquivo `DecolarScraper.py` é onde está localizado o código para consulta da página. Ao chamar a função "pesquisar_voo", é possível inserir a origem, destino e datas de ida e volta para a consulta.
+No arquivo `DecolarScraper.py` é onde está localizado o código para consulta da página. Ao chamar a função "pesquisar_voo", é possível inserir a origem, destino, datas de ida e volta e quantidade de pessoas para a consulta.
+
 
 ---
 
