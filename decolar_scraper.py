@@ -169,22 +169,30 @@ class Decolar(Scraper):
         child_add_button = self.driver.find_element(By.XPATH, SITE_MAP['inputs']['bedroom_container']['child_add'])
         apply_button = self.driver.find_element(By.XPATH, SITE_MAP['buttons']['aplicar_bedroom']['xpath'])
 
+        # Volta a quantidade de adultos para o mínimo
         while not adults_minus_button.get_property('disabled'):
             adults_minus_button.click()
             time.sleep(0.2)
 
+        # Volta a quantidade de menores para o mínimo
         while not child_minus_button.get_property('disabled'):
             child_minus_button.click()
             time.sleep(0.2)
 
+        # Clica no botão adicionar até a quantidade de adultos informada
         for _ in range(1, adults):
             adults_add_button.click()
             time.sleep(0.2)
 
+        # Clica no botão adicionar até a quantidade de menores informada
         for _ in range(menor):
             child_add_button.click()
             time.sleep(0.2)
 
+        '''
+            Caso a quantidade de menores selecionada for maior que zero,
+            é necessário informar a idade de cada menor.
+        '''
         options_lines = self.driver.find_elements(By.CLASS_NAME, 'select__row__options__container')
         for option in options_lines:
             option.click()
@@ -201,6 +209,14 @@ class Decolar(Scraper):
 
         if (adults + menor) > 8:
             raise Exception('Quantidade de pessoas maior que o permitido! (Quantidade máxima = 8)')
+
+        if len(menor_ages) != menor:
+            raise Exception('Quantidade de idades incorreta. A quantidade de idades informada deve ser igual a quantidade de menores!')
+
+        incorrect_age = list(filter(lambda x: True if x >= 18 else False, menor_ages))
+
+        if incorrect_age:
+            raise Exception('Idade incorreta. Idades informadas podem ser apenas menores de 18 anos!')
 
         # Formata as datas para o tipo correto
         dtini = datetime.strptime(dtini, '%d/%m/%Y').date()
@@ -309,8 +325,8 @@ if __name__ == '__main__':
             'dtini': '06/11/2023',
             'dtfin': '22/11/2023',
             'adults': 2,
-            'menor': 5,
-            'menor_ages': [0, 2, 5, 3, 14]  # Idade de todos os menores de 18 anos
+            # 'menor': 5,
+            # 'menor_ages': [0, 2, 5, 3, 18]  # Idade de todos os menores de 18 anos
         }
 
         decolar.abrir_site('https://www.decolar.com/pacotes/')
@@ -318,3 +334,5 @@ if __name__ == '__main__':
         decolar.get_menores_precos()
     except Exception as err:
         print(f'Erro: {err}')
+    finally:
+        decolar.close_browser()
