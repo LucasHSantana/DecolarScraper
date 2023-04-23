@@ -53,6 +53,9 @@ class Scraper():
         )
 
     def close_browser(self):
+        '''
+        Fecha o driver
+        '''
         self.driver.quit()
 
     def __del__(self):
